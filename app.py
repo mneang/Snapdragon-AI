@@ -11,6 +11,43 @@ from translation_routing import get_translation_path, run_translation_pipeline
 from translation_engine import fallback_translation
 
 # ------------------------------
+# CSS Styling
+# ------------------------------
+
+st.markdown(
+    """
+    <style>
+    /* Qualcomm-themed color scheme */
+    body {
+        background-color: #F4F7F9;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .css-1d391kg {  /* Main container styling */
+        background-color: #F4F7F9;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        color: #0072C6;
+    }
+    .stButton>button {
+        background-color: #0072C6;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 0.5em 1em;
+        font-size: 1em;
+    }
+    .stButton>button:hover {
+        background-color: #005A9E;
+    }
+    .stSidebar { 
+        background-color: #FFFFFF; 
+    }
+    </style>
+    """, unsafe_allow_html=True
+)
+
+
+# ------------------------------
 # Global Caching of Heavy Resources
 # ------------------------------
 @st.cache_resource(show_spinner=False)
