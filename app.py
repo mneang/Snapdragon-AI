@@ -11,6 +11,56 @@ from translation_routing import get_translation_path, run_translation_pipeline
 from translation_engine import fallback_translation
 
 # ------------------------------
+# Set Page Config First
+# ------------------------------
+st.markdown(
+    """
+    <style>
+    /* General Body Styling */
+    body {
+        background-color: #F4F7F9;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    /* Headings in Qualcomm Blue */
+    h1, h2, h3, h4, h5, h6 {
+        color: #0072C6;
+    }
+    /* Buttons Styling */
+    .stButton>button {
+        background-color: #0072C6;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 0.5em 1em;
+        font-size: 1em;
+    }
+    .stButton>button:hover {
+        background-color: #005A9E;
+    }
+    /* Sidebar: Qualcomm Blue background, text white by default */
+    .stSidebar {
+        background-color: #0072C6;
+        padding: 1em;
+        color: white !important;
+    }
+    /* Force all text in sidebar to be white (including radio labels, normal labels, etc.) */
+    .stSidebar, .stSidebar * {
+        color: white !important;
+    }
+    /* EXCEPTION: The actual text inside the selectbox & its dropdown options => black on white */
+    /* These classnames/attributes are commonly used by Streamlit for the selectbox's text & items */
+    .stSidebar .stSelectbox .css-1cvc5wz,
+    .stSidebar .stSelectbox .css-1uccc91,
+    .stSidebar .stSelectbox .css-1dimb5e,
+    .stSidebar .stSelectbox [role="option"] {
+        color: black !important;
+        background-color: #FFFFFF !important;
+    }
+    </style>
+    """, unsafe_allow_html=True
+)
+
+# ------------------------------
 # Global Caching of Heavy Resources
 # ------------------------------
 @st.cache_resource(show_spinner=False)
@@ -104,66 +154,56 @@ def get_valid_language_input(label):
     return st.sidebar.selectbox(label, list(lang_map.keys()), format_func=lambda x: lang_map[x])
 
 # ------------------------------
-# Streamlit App Layout & Styling
+# Streamlit App Layout & Instructions
 # ------------------------------
-st.set_page_config(
-    page_title="Multilingual On-Device Translator",
-    layout="wide"
-)
 st.title("Multilingual On-Device Translator")
 st.markdown("""
 **Welcome!**
 
 This application translates between **English, Japanese, Korean, and Chinese**.  
-
 Select your source and target languages from the sidebar, choose your input mode, and enter your text below.
-
+            
 **ようこそ！**  
 本アプリは英語・日本語・韓国語・中国語の翻訳を行います。  
-サイドバーで言語と入力モードを選び、テキストを入力してください。
 
 **환영합니다!**  
-이 앱은 영어, 일본어, 한국어, 중국어 번역을 지원합니다.  
-사이드바에서 언어와 입력 모드를 선택한 후 텍스트를 입력하세요.
+영어, 일본어, 한국어, 중국어 번역을 지원합니다.  
 
 **欢迎!**  
 此应用支持英、日、韩、中文翻译。  
-请在侧边栏选择语言与输入模式，然后输入文本。
 """)
 
 # Sidebar Settings with multilingual labels
-input_mode = st.sidebar.radio("🖥️ Select Input Mode / 入力モード / 입력 모드 / 选择输入模式", ["Text Input", "Voice Input"])
-source_lang = get_valid_language_input("🌍 Source Language / 原言語 / 원본 언어 / 源语言")
-target_lang = get_valid_language_input("🌏 Target Language / 対象言語 / 목표 언어 / 目标语言")
+input_mode = st.sidebar.radio("🖥️ **Select Input Mode | 入力モード | 입력 모드 | 选择输入模式**", ["Text Input", "Voice Input"])
+source_lang = get_valid_language_input("**Source Language | 原言語 | 원본 언어 | 源语言**")
+target_lang = get_valid_language_input("**Target Language | 対象言語 | 목표 언어 | 目标语言**")
 st.sidebar.markdown("**Note:** Cultural tone adjustments have been disabled.")
 
 # ------------------------------
 # Main Input Section
 # ------------------------------
-st.subheader("✍️ Input Text / 入力 / 입력 / 输入")
+st.subheader("✍️ Input Text | 入力 | 입력 | 输入")
 if input_mode == "Text Input":
-    transcription_text = st.text_area("", "", height=150, placeholder="Type your text here")
+    transcription_text = st.text_area("", "", height=150, placeholder="Type your text here | テキストを入力 | 텍스트 입력 | 输入文本")
 else:
-    # Voice input: Use full transcription
     st.audio("output.mp3", format="audio/mp3")
     st.info("Voice input detected. Transcribing audio...")
     try:
         audio = load_audio_cached("output.mp3")
         whisper_model = load_whisper_model_cached()
-        # Perform transcription
         result = whisper_model.transcribe(audio, beam_size=3)
         transcription_text = " ".join([segment.text for segment in result[0]])
         st.write("Transcribed text:", transcription_text)
     except Exception as e:
         st.error("Voice transcription failed. Please use text input.")
-        transcription_text = st.text_area("", "", height=150, placeholder="Type your text here")
+        transcription_text = st.text_area("", "", height=150, placeholder="Type your text here | テキストを入力 | 텍스트 입력 | 输入文本")
 
 # ------------------------------
 # Translation Trigger
 # ------------------------------
 if st.button("▶️ Translate"):
     if not transcription_text.strip():
-        st.error("❌ Please provide text to translate / テキストを入力してください / 텍스트를 입력하세요 / 请输入文本")
+        st.error("❌ Please provide text to translate | テキストを入力してください | 텍스트를 입력하세요 | 请输入文本")
     else:
         process = psutil.Process()
         mem_before = process.memory_info().rss / (1024 * 1024)
