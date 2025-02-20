@@ -185,11 +185,11 @@ st.sidebar.markdown("**Note:** Cultural tone adjustments have been disabled. / �
 col1, col2 = st.columns(2)
 with col1:
     st.subheader("Source Language")
-    st.markdown("<small>原言語 | 원본 언어 | 源语言</small>", unsafe_allow_html=True)
+    st.markdown("<medium>**原言語 | 원본 언어 | 源语言**</medium>", unsafe_allow_html=True)
     source_lang_label = st.selectbox("", language_options, index=2)
 with col2:
     st.subheader("Target Language")
-    st.markdown("<small>対象言語 | 목표 언어 | 目标语言</small>", unsafe_allow_html=True)
+    st.markdown("<medium>**対象言語 | 목표 언어 | 目标语言**</medium>", unsafe_allow_html=True)
     target_lang_label = st.selectbox("", language_options, index=0)
 
 source_lang = label_to_code[source_lang_label]
@@ -197,7 +197,7 @@ target_lang = label_to_code[target_lang_label]
 
 # Input Section with Subtitle
 st.subheader("Input Text")
-st.markdown("<small>入力 | 입력 | 输入</small>", unsafe_allow_html=True)
+st.markdown("<medium>**入力 | 입력 | 输入**</medium>", unsafe_allow_html=True)
 if input_mode == "Text Input":
     transcription_text = st.text_area("", "", height=150, placeholder="Type your text here")
 else:
