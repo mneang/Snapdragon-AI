@@ -9,9 +9,18 @@ from concurrent.futures import ThreadPoolExecutor
 from faster_whisper import WhisperModel
 from translation_routing import get_translation_path, run_translation_pipeline
 from translation_engine import fallback_translation
+from transformers import M2M100ForConditionalGeneration, M2M100Tokenizer  # For M2M100
 
 # ------------------------------
 # Set Page Config First
+# ------------------------------
+st.set_page_config(
+    page_title="Multilingual On-Device Translator",
+    layout="wide"
+)
+
+# ------------------------------
+# Custom CSS Styling (Qualcomm-inspired)
 # ------------------------------
 st.markdown(
     """
@@ -43,21 +52,13 @@ st.markdown(
         padding: 1em;
         color: white !important;
     }
-    /* Force all text in sidebar to be white (including radio labels, normal labels, etc.) */
+    /* Force all text in the sidebar to be white (labels, radio, etc.) */
     .stSidebar, .stSidebar * {
         color: white !important;
     }
-    /* EXCEPTION: The actual text inside the selectbox & its dropdown options => black on white */
-    /* These classnames/attributes are commonly used by Streamlit for the selectbox's text & items */
-    .stSidebar .stSelectbox .css-1cvc5wz,
-    .stSidebar .stSelectbox .css-1uccc91,
-    .stSidebar .stSelectbox .css-1dimb5e,
-    .stSidebar .stSelectbox [role="option"] {
-        color: black !important;
-        background-color: #FFFFFF !important;
-    }
     </style>
-    """, unsafe_allow_html=True
+    """,
+    unsafe_allow_html=True
 )
 
 # ------------------------------
@@ -76,6 +77,30 @@ def load_audio_cached(audio_path):
         return audio
     except Exception as e:
         raise Exception("Audio loading failed: " + str(e))
+
+# ------------------------------
+# M2M100 for Korean→English
+# ------------------------------
+@st.cache_resource(show_spinner=False)
+def load_m2m100_ko_en():
+    model = M2M100ForConditionalGeneration.from_pretrained("facebook/m2m100_418M")
+    tokenizer = M2M100Tokenizer.from_pretrained("facebook/m2m100_418M")
+    return model, tokenizer
+
+def force_ko_en_m2m100(text):
+    """ Force M2M100 translation for Korean->English. """
+    model, tokenizer = load_m2m100_ko_en()
+    tokenizer.src_lang = "ko"
+    inputs = tokenizer(text, return_tensors="pt")
+    generated_tokens = model.generate(
+        **inputs,
+        forced_bos_token_id=tokenizer.get_lang_id("en"),
+        max_length=300,
+        do_sample=True,
+        top_p=0.95,
+        temperature=0.8
+    )
+    return tokenizer.decode(generated_tokens[0], skip_special_tokens=True)
 
 # ------------------------------
 # Utility Functions
@@ -134,27 +159,18 @@ def calculate_repetition_ratio(text):
     return (len(words) - len(set(words))) / len(words)
 
 # ------------------------------
-# Multilingual Labels & Instructions
+# Language Mappings
 # ------------------------------
-lang_map = {
-    "ja": "Japanese (日本語)",
-    "ko": "Korean (한국어)",
-    "zh": "Chinese (中文)",
-    "en": "English"
+label_to_code = {
+    "English": "en",
+    "Japanese (日本語)": "ja",
+    "Korean (한국어)": "ko",
+    "Chinese (中文)": "zh"
 }
-
-native_lang_map = {
-    "日本語": "ja", "にほんご": "ja", "일본어": "ja", "日本语": "ja", "japanese": "ja",
-    "한국어": "ko", "조선말": "ko", "韓国語": "ko", "韩国语": "ko", "korean": "ko",
-    "中文": "zh", "汉语": "zh", "漢語": "zh", "chinese": "zh",
-    "English": "en", "영어": "en", "英語": "en", "英语": "en", "english": "en"
-}
-
-def get_valid_language_input(label):
-    return st.sidebar.selectbox(label, list(lang_map.keys()), format_func=lambda x: lang_map[x])
+language_options = list(label_to_code.keys())
 
 # ------------------------------
-# Streamlit App Layout & Instructions
+# Streamlit Layout & Instructions
 # ------------------------------
 st.title("Multilingual On-Device Translator")
 st.markdown("""
@@ -162,29 +178,40 @@ st.markdown("""
 
 This application translates between **English, Japanese, Korean, and Chinese**.  
 Select your source and target languages from the sidebar, choose your input mode, and enter your text below.
-            
-**ようこそ！**  
-本アプリは英語・日本語・韓国語・中国語の翻訳を行います。  
-
-**환영합니다!**  
-영어, 일본어, 한국어, 중국어 번역을 지원합니다.  
-
-**欢迎!**  
-此应用支持英、日、韩、中文翻译。  
 """)
 
-# Sidebar Settings with multilingual labels
-input_mode = st.sidebar.radio("🖥️ **Select Input Mode | 入力モード | 입력 모드 | 选择输入模式**", ["Text Input", "Voice Input"])
-source_lang = get_valid_language_input("**Source Language | 原言語 | 원본 언어 | 源语言**")
-target_lang = get_valid_language_input("**Target Language | 対象言語 | 목표 언어 | 目标语言**")
+# Sidebar
+input_mode = st.sidebar.radio("Select Input Mode:", ["Text Input", "Voice Input"])
 st.sidebar.markdown("**Note:** Cultural tone adjustments have been disabled.")
 
-# ------------------------------
-# Main Input Section
-# ------------------------------
-st.subheader("✍️ Input Text | 入力 | 입력 | 输入")
+# 2 Columns in Main Area for Source & Target Language
+col1, col2 = st.columns(2)
+with col1:
+    st.subheader("Source Language")
+    st.markdown("<medium>**原言語 • 원본 언어 • 源语言**</medium>", unsafe_allow_html=True)
+    source_lang_label = st.selectbox(
+        "",
+        language_options,
+        index=2
+    )
+with col2:
+    st.subheader("Target Language")
+    st.markdown("<medium>**対象言語 • 목표 언어 • 目标语言**</medium>", unsafe_allow_html=True)
+    target_lang_label = st.selectbox(
+        "",
+        language_options,
+        index=0
+    )
+
+
+source_lang = label_to_code[source_lang_label]
+target_lang = label_to_code[target_lang_label]
+
+# Input Section
+st.subheader("Input Text")
+st.markdown("<medium>**入力 • 입력 • 输入**</medium>", unsafe_allow_html=True)
 if input_mode == "Text Input":
-    transcription_text = st.text_area("", "", height=150, placeholder="Type your text here | テキストを入力 | 텍스트 입력 | 输入文本")
+    transcription_text = st.text_area("", "", height=150, placeholder="Type your text here • テキストを入力 • 텍스트 입력 • 输入文本")
 else:
     st.audio("output.mp3", format="audio/mp3")
     st.info("Voice input detected. Transcribing audio...")
@@ -196,78 +223,76 @@ else:
         st.write("Transcribed text:", transcription_text)
     except Exception as e:
         st.error("Voice transcription failed. Please use text input.")
-        transcription_text = st.text_area("", "", height=150, placeholder="Type your text here | テキストを入力 | 텍스트 입력 | 输入文本")
-
-# ------------------------------
+        transcription_text = st.text_area("", "", height=150, placeholder="Type your text here • テキストを入力 • 텍스트 입력 • 输入文本")
 # Translation Trigger
-# ------------------------------
 if st.button("▶️ Translate"):
     if not transcription_text.strip():
-        st.error("❌ Please provide text to translate | テキストを入力してください | 텍스트를 입력하세요 | 请输入文本")
+        st.error("❌ Please provide text to translate")
     else:
         process = psutil.Process()
         mem_before = process.memory_info().rss / (1024 * 1024)
         start_time = time.time()
         
-        # Fallback for unsupported language pairs
-        if source_lang == "en" and target_lang == "ja":
-            st.info("🔄 English → Japanese translation requested. Using fallback translator.")
-            translated_text = fallback_translation(transcription_text, "en-ja")
-        elif source_lang == "ko" and target_lang == "ja":
-            st.info("🔄 Korean → Japanese translation requested. Using pivot (ko→en) then fallback (en→ja).")
-            pivot_text = run_translation_pipeline(transcription_text, ["ko-en"])
-            translated_text = fallback_translation(pivot_text, "en-ja")
-        elif source_lang == "zh" and target_lang == "ja":
-            st.info("🔄 Chinese → Japanese translation requested. Using pivot (zh→en) then fallback (en→ja).")
-            pivot_text = run_translation_pipeline(transcription_text, ["zh-en"])
-            translated_text = fallback_translation(pivot_text, "en-ja")
+        # If Korean->English, forcibly use M2M100
+        if source_lang == "ko" and target_lang == "en":
+            st.info("Forcing M2M100 for Korean→English to avoid repeated tokens.")
+            translated_text = force_ko_en_m2m100(transcription_text)
         else:
-            translation_path = get_translation_path(source_lang, target_lang)
-            if translation_path is None:
-                st.error(f"No translation path available from {lang_map[source_lang]} to {lang_map[target_lang]}")
-                translated_text = ""
+            # Normal pipeline / fallback
+            if source_lang == "en" and target_lang == "ja":
+                st.info("🔄 English → Japanese translation requested. Using fallback translator.")
+                translated_text = fallback_translation(transcription_text, "en-ja")
+            elif source_lang == "ko" and target_lang == "ja":
+                st.info("🔄 Korean → Japanese translation requested. Using pivot (ko→en) then fallback (en→ja).")
+                pivot_text = run_translation_pipeline(transcription_text, ["ko-en"])
+                translated_text = fallback_translation(pivot_text, "en-ja")
+            elif source_lang == "zh" and target_lang == "ja":
+                st.info("🔄 Chinese → Japanese translation requested. Using pivot (zh→en) then fallback (en→ja).")
+                pivot_text = run_translation_pipeline(transcription_text, ["zh-en"])
+                translated_text = fallback_translation(pivot_text, "en-ja")
             else:
-                st.write("Translation path:", translation_path)
-                if len(translation_path) == 1:
-                    sentences = re.split(r'(?<=[\.\!\?])\s+', transcription_text)
-                    if len(sentences) > 1:
-                        st.write("Multi-sentence input detected. Processing in batch...")
-                        with ThreadPoolExecutor() as executor:
-                            futures = [executor.submit(run_translation_pipeline, sentence, translation_path) for sentence in sentences]
-                            translated_text = " ".join([f.result() for f in futures])
+                translation_path = get_translation_path(source_lang, target_lang)
+                if translation_path is None:
+                    st.error(f"No translation path available from {source_lang_label} to {target_lang_label}")
+                    translated_text = ""
+                else:
+                    st.write("Translation path:", translation_path)
+                    if len(translation_path) == 1:
+                        sentences = re.split(r'(?<=[\\.\\!\\?])\\s+', transcription_text)
+                        if len(sentences) > 1:
+                            st.write("Multi-sentence input detected. Processing in batch...")
+                            with ThreadPoolExecutor() as executor:
+                                futures = [executor.submit(run_translation_pipeline, sentence, translation_path) for sentence in sentences]
+                                translated_text = " ".join([f.result() for f in futures])
+                        else:
+                            translated_text = run_translation_pipeline(transcription_text, translation_path)
+                    elif len(translation_path) > 1 and translation_path[0].endswith("-en") and source_lang in ["ja", "ko"]:
+                        pivot_text = run_translation_pipeline(transcription_text, [translation_path[0]])
+                        pivot_text = clean_pivot_text(pivot_text)
+                        rep_ratio = calculate_repetition_ratio(pivot_text)
+                        if rep_ratio > 0.20:
+                            st.warning("High repetition detected in pivot translation. Using fallback translator.")
+                            pivot_text = fallback_translation(transcription_text, "ja-en")
+                        if not pivot_text.strip():
+                            st.warning("Pivot translation returned empty. Using fallback translator.")
+                            pivot_text = fallback_translation(transcription_text, "ja-en")
+                        st.write("Pivot translation:", pivot_text)
+                        remaining_path = translation_path[1:]
+                        try:
+                            translated_text = run_translation_pipeline(pivot_text, remaining_path)
+                        except Exception as e:
+                            st.error("Error in processing pivot translation. Using fallback translator for ko-en-reverse.")
+                            translated_text = fallback_translation(pivot_text, "ko-en-reverse")
                     else:
                         translated_text = run_translation_pipeline(transcription_text, translation_path)
-                elif len(translation_path) > 1 and translation_path[0].endswith("-en") and source_lang in ["ja", "ko"]:
-                    pivot_text = run_translation_pipeline(transcription_text, [translation_path[0]])
-                    pivot_text = clean_pivot_text(pivot_text)
-                    rep_ratio = calculate_repetition_ratio(pivot_text)
-                    if rep_ratio > 0.20:
-                        st.warning("High repetition detected in pivot translation. Using fallback translator.")
-                        pivot_text = fallback_translation(transcription_text, "ja-en")
-                    if not pivot_text.strip():
-                        st.warning("Pivot translation returned empty. Using fallback translator.")
-                        pivot_text = fallback_translation(transcription_text, "ja-en")
-                    st.write("Pivot translation:", pivot_text)
-                    remaining_path = translation_path[1:]
-                    try:
-                        translated_text = run_translation_pipeline(pivot_text, remaining_path)
-                    except Exception as e:
-                        st.error("Error in processing pivot translation. Using fallback translator for ko-en-reverse.")
-                        translated_text = fallback_translation(pivot_text, "ko-en-reverse")
-                else:
-                    translated_text = run_translation_pipeline(transcription_text, translation_path)
-                
-                if source_lang == "ja" and target_lang == "en" and not translated_text.strip():
-                    st.warning("Direct ja→en output empty. Using fallback translator.")
-                    translated_text = fallback_translation(transcription_text, "ja-en")
-                
-                if source_lang == "ko" and target_lang == "en":
-                    rep_ratio = calculate_repetition_ratio(translated_text)
-                    if rep_ratio > 0.20:
-                        st.warning("High repetition detected in Korean→English output. Using fallback translator.")
-                        translated_text = fallback_translation(transcription_text, "ko-en")
+                    
+                    if source_lang == "ja" and target_lang == "en" and not translated_text.strip():
+                        st.warning("Direct ja→en output empty. Using fallback translator.")
+                        translated_text = fallback_translation(transcription_text, "ja-en")
         
-        translated_text = additional_safety_cleanup(translated_text)
+        # Final Cleanup
+        translated_text = remove_excessive_repetition(translated_text)
+        translated_text = remove_excessive_repetition_tokens(translated_text)
         
         end_time = time.time()
         total_time = end_time - start_time
@@ -280,7 +305,7 @@ if st.button("▶️ Translate"):
         
         gc.collect()
         
-        sentences = re.split(r'(?<=[\.\!\?])\s+', transcription_text)
+        sentences = re.split(r'(?<=[\\.\\!\\?])\\s+', transcription_text)
         if len(sentences) > 1:
             st.write("📊 Batch processing was enabled for multi-sentence input.")
         else:
