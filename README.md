@@ -101,7 +101,7 @@ streamlit run app.py
   If you select voice input, a sample audio file (`output.mp3`) will play, and the app will automatically transcribe it using the Faster-Whisper model. You can then edit the transcription if needed before translating.
 
 ### Translation Process:
-After entering your text, click the **"▶️ Translate"** button. The app will display processing time and memory usage, demonstrating the on-device efficiency.
+After entering your text, click the **"▶️ Translate"** button. The app will display processing time and memory usage, demonstrating the on-device efficiency.  
 **Note:** Longer sentences will take more time to process translations.
 
 ### Model Loading Note:
@@ -118,3 +118,28 @@ Due to the large size of our ONNX models, deploying to services like Heroku or S
   Host the ONNX models externally (e.g., on the Hugging Face Hub) and modify the application to download them at runtime.
 
 ---
+
+## Future Improvements and Caveats/Assumptions
+
+While our Multilingual On-Device Translator is a robust and innovative solution, we recognize that there are areas for further refinement. Our commitment to continuous improvement is reflected in the following points:
+
+- **Enhanced Model Optimization:**  
+  We plan to further optimize our ONNX models by exploring advanced quantization techniques and leveraging Qualcomm’s SNPE or TensorRT, reducing latency and memory usage even more on Snapdragon devices.
+
+- **Expanded Language Support:**  
+  Future updates will include support for additional languages and dialects, broadening the accessibility of our translation engine to a wider global audience.
+
+- **Improved Fallback Mechanisms:**  
+  We are actively refining our fallback translators (e.g., M2M100) to minimize edge cases such as repetitive token output. Ongoing adjustments to decoding parameters and post-processing routines will enhance overall translation quality.
+
+- **Voice Input Integration:**  
+  Although currently in beta, we intend to fully integrate live voice transcription using the Faster-Whisper model, ensuring seamless end-to-end voice-to-translation functionality.
+
+- **User Experience Enhancements:**  
+  Further refinements to the UI/UX—including more intuitive multilingual prompts, mobile optimization, and detailed status feedback—are planned to improve usability and overall user satisfaction.
+
+- **Assumptions and Limitations:**  
+  - Our current system assumes a stable network connection during the initial model downloads and fallback downloads.  
+  - The fallback mechanism is designed to handle rare edge cases; however, we acknowledge that certain phrasings may still produce minor decoding artifacts, which will be addressed in future updates.
+
+We believe these enhancements will not only solidify our competitive edge but also demonstrate our commitment to ongoing innovation and impact in the field of on-device AI translation.
