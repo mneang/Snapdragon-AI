@@ -86,6 +86,29 @@ streamlit run app.py
 
 ---
 
+## Usage Instructions
+
+### Language Options:
+- The app supports **English, Japanese, Korean, and Chinese**.  
+  Select your source language and target language from the sidebar.
+  - **English** is used for clear instructions.
+  - **Japanese, Korean, and Chinese** options ensure the app is accessible for users in those regions.
+
+### Input Modes:
+- **Text Input:**  
+  Simply type your text into the provided text area.
+- **Voice Input (Beta):**  
+  If you select voice input, a sample audio file (`output.mp3`) will play, and the app will automatically transcribe it using the Faster-Whisper model. You can then edit the transcription if needed before translating.
+
+### Translation Process:
+After entering your text, click the **"▶️ Translate"** button. The app will display processing time and memory usage, demonstrating the on-device efficiency.
+**Note:** Longer sentences will take more time to process translations.
+
+### Model Loading Note:
+Please be aware that the fallback translator (using M2M100) and the ONNX model loading may take extra time on the first run. Refreshing the page after the initial load can help ensure smoother performance.
+
+---
+
 ## Deployment
 
 Due to the large size of our ONNX models, deploying to services like Heroku or Streamlit Community Cloud can be challenging. We recommend:
