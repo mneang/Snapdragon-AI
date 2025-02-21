@@ -1,1 +1,97 @@
-# Snapdragon-AI
+# Multilingual On-Device Translator
+
+**Welcome to the future of translation!**  
+This project harnesses the power of on-device AI to provide real-time, robust translations between English, Japanese, Korean, and Chinese. Our solution not only meets the hackathon criteria but exceeds them by offering state-of-the-art fallback mechanisms, on-device optimization for Snapdragon devices, and a user-friendly interface.
+
+---
+
+## Problem Statement
+
+In today’s global business environment, effective communication across multiple languages is crucial. Traditional translation systems often rely on cloud connectivity, which can lead to latency, privacy issues, and dependency on a stable network connection. Our goal was to develop an on-device translator that:
+- **Delivers real-time translations** without relying on external servers.
+- **Optimizes performance on Snapdragon/Qualcomm devices** for low latency and efficient memory usage.
+- **Handles edge cases gracefully** using robust fallback strategies.
+- **Provides a multilingual user interface** to serve users worldwide.
+
+---
+
+## Technical Overview
+
+Our translation engine supports 12 inter-language pairs with robust fallback logic:
+- **Primary Translation:**  
+  Uses exported ONNX models derived from MarianMTModel (optimized with int8 quantization for on-device efficiency).
+- **Fallback Mechanism:**  
+  If an ONNX model for a specific translation pair is missing or produces unstable output, our system automatically falls back to using the M2M100 model.
+- **Optimizations:**  
+  - **Caching:** Heavy resources (e.g., ONNX models and tokenizers) are cached to reduce load times.
+  - **Parallel Processing:** Multi-sentence inputs are processed concurrently to improve efficiency.
+  - **Safety Nets:** Extensive post-processing is implemented to clean up decoding errors (e.g., excessive token repetition).
+
+These strategies ensure our system is both innovative and resilient, meeting the highest standards expected by the judges.
+
+---
+
+## System Dependencies
+
+Before installing Python dependencies, please ensure the following system packages are installed. This is required to build certain components (e.g., SentencePiece):
+
+```bash
+sudo apt-get update
+sudo apt-get install cmake pkg-config libsentencepiece-dev
+```
+These commands install CMake, pkg-config, and the SentencePiece development files (including sentencepiece.pc), ensuring a smooth build process during pip install -r requirements.txt.
+
+---
+
+## ONNX Model Export and Fallback Setup
+
+Our translation engine uses exported ONNX models for primary translation routes. **Before running the application, please complete the following steps:**
+
+1. **Export the ONNX Models:**  
+   Run the provided MarianMTModel export script (e.g., `export_marian_models.py`) to generate the ONNX files (such as `marian_ja-en.onnx`, `marian_zh-en.onnx`, etc.) in the `models/` directory.
+   ```bash
+   python export_marian_models.py
+
+2. **Fallback Behavior:**  
+If a specific ONNX model is not available (for example, if the export has not been run), the system will automatically fall back to using the M2M100 model.
+**Note:** The M2M100 model will be downloaded on the first run, which might also take some time.
+
+---
+
+## Installation
+
+1. **Clone the Repository:**  
+   ```bash
+   git clone https://github.com/mneang/snapdragon-ai.git
+   cd snapdragon-ai
+  
+2. **Install Python Dependencies:**  
+  ```bash
+  pip install -r requirements.txt
+  ```
+**Note:** The M2M100 model will be downloaded on the first run, which might also take some time.
+
+3. **Export the ONNX Models:**  
+Run the model export script as described above.
+
+---
+
+## Running the Application
+
+You can run the application using Streamlit. In your terminal or GitHub Codespaces, execute:
+```bash
+streamlit run app.py
+```
+**Note**: For demo purposes, we recommend running this in GitHub Codespaces on the virtual Snapdragon device (1000 minutes of access). 
+
+---
+
+## Deployment
+
+Due to the large size of our ONNX models, deploying to services like Heroku or Streamlit Community Cloud can be challenging. We recommend:
+- **Running the App via GitHub Codespaces:**  
+  This allows you to access the app on a virtual Snapdragon device without encountering file size limits.
+- **Alternatively:**  
+  Host the ONNX models externally (e.g., on the Hugging Face Hub) and modify the application to download them at runtime.
+
+---
